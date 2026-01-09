@@ -8,6 +8,7 @@ export interface NewsItem {
   url: string;
   category: string;
   relevanceScore: number;
+  insight?: string; // AI generated market insight
 }
 
 export enum CRMCategory {
@@ -27,6 +28,13 @@ export interface User {
 }
 
 export type AppView = 'home' | 'about';
+
+export interface Message {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp: Date;
+}
 
 export interface NewsState {
   items: NewsItem[];
