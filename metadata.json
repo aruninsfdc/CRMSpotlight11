@@ -1,0 +1,5 @@
+{
+  "name": "CRM Spotlight",
+  "description": "An AI-powered aggregator that tracks and summarizes the latest CRM industry news, providing 6-hourly updates and direct access to source articles.",
+  "requestFramePermissions": []
+}
