@@ -19,6 +19,15 @@ export enum CRMCategory {
   ENTERPRISE = 'Enterprise CRM'
 }
 
+export interface User {
+  name: string;
+  email: string;
+  photo: string;
+  isAdmin: boolean;
+}
+
+export type AppView = 'home' | 'about';
+
 export interface NewsState {
   items: NewsItem[];
   loading: boolean;
