@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import NewsCard from './components/NewsCard';
 import AboutPage from './components/AboutPage';
 import ChatBot from './components/ChatBot';
+import DeploymentPage from './components/DeploymentPage';
 import { NewsItem, CRMCategory, User, AppView } from './types';
 import { fetchCRMNews } from './services/geminiService';
 import { getIntervalsSince } from './utils/dateUtils';
@@ -107,6 +107,65 @@ const App: React.FC = () => {
     });
   }, [items, activeCategory, searchQuery]);
 
+  const renderContent = () => {
+    switch (currentView) {
+      case 'deployment':
+        return <DeploymentPage user={user} />;
+      case 'about':
+        return <AboutPage />;
+      default:
+        return (
+          <div className="p-6 md:p-10 max-w-7xl mx-auto w-full">
+            {loading || (refreshing && items.length === 0) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="h-64 bg-white rounded-2xl border border-slate-200 animate-pulse p-6">
+                    <div className="h-4 bg-slate-100 rounded w-1/4 mb-4"></div>
+                    <div className="h-8 bg-slate-100 rounded w-3/4 mb-6"></div>
+                    <div className="space-y-3">
+                      <div className="h-3 bg-slate-50 rounded w-full"></div>
+                      <div className="h-3 bg-slate-50 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+                <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mb-6">
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{error}</h3>
+                <p className="text-slate-500 text-sm max-w-md mb-8">
+                  The intelligence system encountered a synchronization error. This usually happens when API limits are reached or the network is restricted.
+                </p>
+                <button 
+                  onClick={loadData}
+                  className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
+                >
+                  Retry Connection
+                </button>
+              </div>
+            ) : filteredItems.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+                {filteredItems.map(item => (
+                  <NewsCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center min-h-[40vh] text-slate-400">
+                <svg className="w-12 h-12 mb-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <span className="font-bold text-sm">No data matching your filters</span>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
       <Sidebar updateCount={items.length} />
@@ -135,33 +194,35 @@ const App: React.FC = () => {
               </div>
               
               <nav className="hidden md:flex items-center space-x-6">
-                {(['home', 'about'] as AppView[]).map((view) => (
+                {(['home', 'about', 'deployment'] as AppView[]).map((view) => (
                   <button 
                     key={view}
                     onClick={() => setCurrentView(view)}
-                    className={`text-sm font-bold capitalize ${currentView === view ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'}`}
+                    className={`text-sm font-bold capitalize transition-all ${currentView === view ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'}`}
                   >
-                    {view}
+                    {view === 'deployment' ? 'Build & Deploy' : view}
                   </button>
                 ))}
               </nav>
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="relative hidden lg:block">
-                <input
-                  type="text"
-                  placeholder="Filter news..."
-                  className="w-64 pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
+              {currentView === 'home' && (
+                <div className="relative hidden lg:block">
+                  <input
+                    type="text"
+                    placeholder="Filter news..."
+                    className="w-64 pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              )}
 
-              {user?.isAdmin && (
+              {user?.isAdmin && currentView === 'home' && (
                 <button 
                   onClick={() => handleManualRefresh()}
                   disabled={refreshing}
@@ -175,7 +236,7 @@ const App: React.FC = () => {
               {user ? (
                 <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
                   <img src={user.photo} className="w-9 h-9 rounded-full border border-slate-200" alt="Admin" />
-                  <button onClick={() => setUser(null)} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors">LOGOUT</button>
+                  <button onClick={() => { setUser(null); setCurrentView('home'); }} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors">LOGOUT</button>
                 </div>
               ) : (
                 <button onClick={handleSignIn} className="text-xs font-bold text-indigo-600 hover:text-indigo-700">Admin Login</button>
@@ -183,75 +244,27 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="px-6 border-t border-slate-100 overflow-x-auto bg-slate-50/50">
-            <nav className="flex space-x-8">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`py-3 border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${
-                    activeCategory === cat ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </nav>
-          </div>
+          {currentView === 'home' && (
+            <div className="px-6 border-t border-slate-100 overflow-x-auto bg-slate-50/50">
+              <nav className="flex space-x-8">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`py-3 border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                      activeCategory === cat ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )}
         </header>
 
         <div className="flex-grow overflow-y-auto">
-          {currentView === 'home' ? (
-            <div className="p-6 md:p-10 max-w-7xl mx-auto w-full">
-              {loading || (refreshing && items.length === 0) ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="h-64 bg-white rounded-2xl border border-slate-200 animate-pulse p-6">
-                      <div className="h-4 bg-slate-100 rounded w-1/4 mb-4"></div>
-                      <div className="h-8 bg-slate-100 rounded w-3/4 mb-6"></div>
-                      <div className="space-y-3">
-                        <div className="h-3 bg-slate-50 rounded w-full"></div>
-                        <div className="h-3 bg-slate-50 rounded w-5/6"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-                  <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mb-6">
-                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">{error}</h3>
-                  <p className="text-slate-500 text-sm max-w-md mb-8">
-                    The intelligence system encountered a synchronization error. This usually happens when API limits are reached or the network is restricted.
-                  </p>
-                  <button 
-                    onClick={loadData}
-                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
-                  >
-                    Retry Connection
-                  </button>
-                </div>
-              ) : filteredItems.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
-                  {filteredItems.map(item => (
-                    <NewsCard key={item.id} item={item} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-[40vh] text-slate-400">
-                  <svg className="w-12 h-12 mb-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  <span className="font-bold text-sm">No data matching your filters</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <AboutPage />
-          )}
+          {renderContent()}
         </div>
       </main>
 

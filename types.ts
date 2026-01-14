@@ -27,13 +27,23 @@ export interface User {
   isAdmin: boolean;
 }
 
-export type AppView = 'home' | 'about';
+export type AppView = 'home' | 'about' | 'deployment';
 
 export interface Message {
   id: string;
   role: 'user' | 'model';
   text: string;
   timestamp: Date;
+}
+
+export interface DeploymentRecord {
+  id: string;
+  version: string;
+  status: 'success' | 'failed' | 'in-progress';
+  timestamp: string;
+  deployedBy: string;
+  commit: string;
+  log: string[];
 }
 
 export interface NewsState {
