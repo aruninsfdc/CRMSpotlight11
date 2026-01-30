@@ -27,7 +27,7 @@ export interface User {
   isAdmin: boolean;
 }
 
-export type AppView = 'home' | 'about' | 'deployment';
+export type AppView = 'home' | 'about';
 
 export interface Message {
   id: string;
@@ -36,19 +36,20 @@ export interface Message {
   timestamp: Date;
 }
 
-export interface DeploymentRecord {
-  id: string;
-  version: string;
-  status: 'success' | 'failed' | 'in-progress';
-  timestamp: string;
-  deployedBy: string;
-  commit: string;
-  log: string[];
-}
-
 export interface NewsState {
   items: NewsItem[];
   loading: boolean;
   lastUpdated: string | null;
   error: string | null;
+}
+
+// Added DeploymentRecord interface to fix error in DeploymentPage.tsx
+export interface DeploymentRecord {
+  id: string;
+  version: string;
+  status: 'success' | 'failed';
+  timestamp: string;
+  deployedBy: string;
+  commit: string;
+  log: string[];
 }

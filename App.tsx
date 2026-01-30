@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import NewsCard from './components/NewsCard';
 import AboutPage from './components/AboutPage';
 import ChatBot from './components/ChatBot';
-import DeploymentPage from './components/DeploymentPage';
 import { NewsItem, CRMCategory, User, AppView } from './types';
 import { fetchCRMNews } from './services/geminiService';
 import { getIntervalsSince } from './utils/dateUtils';
@@ -12,10 +12,30 @@ import { saveNewsToDatabase, checkDbConnection, fetchNewsFromDatabase } from './
 const START_DATE = new Date('2025-01-06T00:00:00');
 const CATEGORIES = ['All News', ...Object.values(CRMCategory)];
 
+const DynamicLogo = () => (
+  <div className="relative w-14 h-14 flex items-center justify-center group overflow-hidden rounded-[1.2rem]">
+    {/* Animated background glow */}
+    <div className="absolute inset-0 bg-indigo-600 shadow-[0_10px_30px_rgba(79,70,229,0.3)] group-hover:bg-indigo-500 transition-colors duration-500"></div>
+    
+    {/* Spinning lens element */}
+    <div className="absolute inset-0 opacity-40 animate-[spin_8s_linear_infinite]">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-gradient-to-b from-white/0 via-white/40 to-white/0"></div>
+    </div>
+    
+    {/* Center Aperture SVG */}
+    <svg className="w-8 h-8 text-white relative z-10 transform transition-all duration-700 group-hover:scale-110 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <circle cx="12" cy="12" r="3" className="stroke-[2.5]" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41" />
+    </svg>
+    
+    {/* Dynamic Lens Flare Overlay */}
+    <div className="absolute -inset-4 bg-gradient-to-tr from-white/0 via-white/15 to-white/0 rotate-45 transform translate-x-[-150%] group-hover:translate-x-[150%] transition-transform duration-1000"></div>
+  </div>
+);
+
 const App: React.FC = () => {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'connecting'>('connecting');
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('All News');
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,11 +64,11 @@ const App: React.FC = () => {
         const updatedItems = await fetchNewsFromDatabase();
         setItems(updatedItems);
       } else if (isInitialBackfill) {
-        setError("Crawl complete, but no new industry insights were found for this period.");
+        setError("Market scan complete. No new signals detected.");
       }
     } catch (err: any) {
       console.error("Crawl failed", err);
-      setError(err.message || "Failed to access AI research tools. Please try again later.");
+      setError("Intelligence grid temporarily offline. Please verify system configuration.");
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -57,30 +77,23 @@ const App: React.FC = () => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setDbStatus('connecting');
     setError(null);
     try {
       const isOk = await checkDbConnection();
       if (isOk) {
-        setDbStatus('connected');
         const dbItems = await fetchNewsFromDatabase();
-        
         if (dbItems.length === 0) {
-          console.log("Database empty. Starting backfill from Jan 6...");
           await handleManualRefresh(true);
         } else {
           setItems(dbItems);
           setLoading(false);
         }
       } else {
-        setDbStatus('error');
-        setError("Could not connect to the cloud storage service.");
+        setError("Local persistence service unreachable.");
         setLoading(false);
       }
     } catch (err: any) {
-      console.error("DB Load Error:", err);
-      setDbStatus('error');
-      setError('System integrity check failed. Connection to SQL Server timed out.');
+      setError('System integrity check failed.');
       setLoading(false);
     }
   }, [handleManualRefresh]);
@@ -91,9 +104,9 @@ const App: React.FC = () => {
 
   const handleSignIn = () => {
     setUser({
-      name: "Spotlight Admin",
+      name: "Intelligence Admin",
       email: "admin@crmspotlight.com",
-      photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=Admin${Math.floor(Math.random()*100)}`,
+      photo: `https://api.dicebear.com/7.x/shapes/svg?seed=AdminSpotlight`,
       isAdmin: true
     });
   };
@@ -109,56 +122,72 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (currentView) {
-      case 'deployment':
-        return <DeploymentPage user={user} />;
       case 'about':
         return <AboutPage />;
       default:
         return (
-          <div className="p-6 md:p-10 max-w-7xl mx-auto w-full">
+          <div className="p-8 md:p-12 max-w-[1600px] mx-auto w-full">
+            <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <h2 className="text-4xl md:text-5xl font-black text-zinc-900 tracking-tightest mb-4">
+                  Intelligence <span className="text-indigo-600">Feed</span>
+                </h2>
+                <p className="text-zinc-500 font-medium max-w-md leading-relaxed">
+                  Real-time market signals and ecosystem shifts curated by AI.
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-3 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`whitespace-nowrap px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${
+                      activeCategory === cat 
+                        ? 'bg-zinc-900 text-white border-zinc-900 shadow-xl' 
+                        : 'bg-white text-zinc-400 border-zinc-200 hover:border-zinc-400 hover:text-zinc-600'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {loading || (refreshing && items.length === 0) ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[1,2,3,4,5,6].map(i => (
-                  <div key={i} className="h-64 bg-white rounded-2xl border border-slate-200 animate-pulse p-6">
-                    <div className="h-4 bg-slate-100 rounded w-1/4 mb-4"></div>
-                    <div className="h-8 bg-slate-100 rounded w-3/4 mb-6"></div>
+                  <div key={i} className="h-80 bg-white/50 backdrop-blur-sm rounded-[2rem] border border-zinc-100 animate-pulse p-8">
+                    <div className="h-4 bg-zinc-100 rounded-full w-1/4 mb-6"></div>
+                    <div className="h-8 bg-zinc-100 rounded-xl w-3/4 mb-4"></div>
+                    <div className="h-8 bg-zinc-100 rounded-xl w-1/2 mb-8"></div>
                     <div className="space-y-3">
-                      <div className="h-3 bg-slate-50 rounded w-full"></div>
-                      <div className="h-3 bg-slate-50 rounded w-5/6"></div>
+                      <div className="h-3 bg-zinc-50 rounded-full w-full"></div>
+                      <div className="h-3 bg-zinc-50 rounded-full w-5/6"></div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : error ? (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-                <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mb-6">
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4 bg-white/60 backdrop-blur rounded-[3rem] border border-zinc-200">
+                <div className="w-24 h-24 bg-red-50 text-red-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner">
+                  <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{error}</h3>
-                <p className="text-slate-500 text-sm max-w-md mb-8">
-                  The intelligence system encountered a synchronization error. This usually happens when API limits are reached or the network is restricted.
+                <h3 className="text-2xl font-black text-zinc-900 mb-3">Feed Offline</h3>
+                <p className="text-zinc-500 text-sm max-w-sm mb-10 font-medium leading-relaxed">
+                  {error}
                 </p>
-                <button 
-                  onClick={loadData}
-                  className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all"
-                >
-                  Retry Connection
+                <button onClick={loadData} className="px-10 py-4 bg-zinc-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl hover:bg-indigo-600 transition-all active:scale-95">
+                  Reconnect to Grid
                 </button>
               </div>
-            ) : filteredItems.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-32">
                 {filteredItems.map(item => (
                   <NewsCard key={item.id} item={item} />
                 ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] text-slate-400">
-                <svg className="w-12 h-12 mb-4 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <span className="font-bold text-sm">No data matching your filters</span>
               </div>
             )}
           </div>
@@ -167,100 +196,89 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 relative">
+    <div className="flex min-h-screen relative">
       <Sidebar updateCount={items.length} />
 
       <main className="flex-grow flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
-          <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-4 cursor-pointer group" onClick={() => setCurrentView('home')}>
-                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-white transition-transform group-hover:scale-105">
-                  <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-zinc-200/50">
+          <div className="px-8 py-6 flex items-center justify-between gap-6">
+            <div className="flex items-center space-x-12">
+              <div className="flex items-center space-x-6 cursor-pointer group" onClick={() => setCurrentView('home')}>
+                <DynamicLogo />
                 <div>
-                  <h1 className="text-2xl font-black tracking-tighter">
-                    CRM<span className="text-indigo-600">Spotlight</span>
+                  <h1 className="text-2xl font-black tracking-tightest leading-none mb-1.5 transition-colors group-hover:text-indigo-600">
+                    CRM<span className="text-indigo-600 group-hover:text-zinc-900">Spotlight</span>
                   </h1>
-                  <div className="flex items-center space-x-2">
-                    <span className={`w-2 h-2 rounded-full ${dbStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`}></span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      {dbStatus === 'connected' ? 'Cloud SQL Active' : 'System Offline'}
-                    </span>
-                  </div>
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.25em] leading-none">
+                    Architecting Clarity in the CRM Ecosystem
+                  </p>
                 </div>
               </div>
               
-              <nav className="hidden md:flex items-center space-x-6">
-                {(['home', 'about', 'deployment'] as AppView[]).map((view) => (
+              <nav className="hidden lg:flex items-center space-x-12">
+                {(['home', 'about'] as AppView[]).map((view) => (
                   <button 
                     key={view}
                     onClick={() => setCurrentView(view)}
-                    className={`text-sm font-bold capitalize transition-all ${currentView === view ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'}`}
+                    className={`text-[10px] font-black uppercase tracking-widest transition-all relative py-2 ${
+                      currentView === view ? 'text-indigo-600' : 'text-zinc-400 hover:text-zinc-900'
+                    }`}
                   >
-                    {view === 'deployment' ? 'Build & Deploy' : view}
+                    {view}
+                    {currentView === view && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-full animate-in fade-in slide-in-from-left-2"></span>
+                    )}
                   </button>
                 ))}
               </nav>
             </div>
 
-            <div className="flex items-center space-x-4">
-              {currentView === 'home' && (
-                <div className="relative hidden lg:block">
-                  <input
-                    type="text"
-                    placeholder="Filter news..."
-                    className="w-64 pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <svg className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              )}
+            <div className="flex items-center space-x-8">
+              <div className="relative hidden xl:block">
+                <input
+                  type="text"
+                  placeholder="Analyze market..."
+                  className="w-72 pl-12 pr-6 py-3.5 bg-zinc-100 border-none rounded-2xl text-[11px] font-bold focus:ring-2 focus:ring-indigo-600 transition-all placeholder:text-zinc-400 shadow-inner"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <svg className="absolute left-4 top-4 h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
 
               {user?.isAdmin && currentView === 'home' && (
                 <button 
                   onClick={() => handleManualRefresh()}
                   disabled={refreshing}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-black disabled:opacity-50 transition-all flex items-center space-x-2"
+                  className="px-6 py-3.5 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 disabled:opacity-50 transition-all flex items-center space-x-3 shadow-xl shadow-zinc-200"
                 >
-                  {refreshing ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : null}
-                  <span>{refreshing ? 'Crawling...' : 'Scan Market'}</span>
+                  {refreshing ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                  <span>{refreshing ? 'Scanning' : 'Market Scan'}</span>
                 </button>
               )}
 
-              {user ? (
-                <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                  <img src={user.photo} className="w-9 h-9 rounded-full border border-slate-200" alt="Admin" />
-                  <button onClick={() => { setUser(null); setCurrentView('home'); }} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors">LOGOUT</button>
-                </div>
-              ) : (
-                <button onClick={handleSignIn} className="text-xs font-bold text-indigo-600 hover:text-indigo-700">Admin Login</button>
-              )}
+              <div className="flex items-center">
+                {user ? (
+                  <div className="flex items-center space-x-5 pl-8 border-l border-zinc-200">
+                    <div className="text-right hidden sm:block">
+                      <div className="text-[10px] font-black text-zinc-900 uppercase tracking-tightest leading-none mb-1">{user.name}</div>
+                      <div className="text-[8px] font-bold text-indigo-600 uppercase tracking-widest">Master Analyst</div>
+                    </div>
+                    <img src={user.photo} className="w-12 h-12 rounded-2xl border-2 border-white shadow-xl shadow-zinc-100" alt="Admin" />
+                  </div>
+                ) : (
+                  <button onClick={handleSignIn} className="px-6 py-3.5 bg-white border border-zinc-200 text-zinc-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-zinc-900 transition-all shadow-sm">
+                    Access Portal
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-
-          {currentView === 'home' && (
-            <div className="px-6 border-t border-slate-100 overflow-x-auto bg-slate-50/50">
-              <nav className="flex space-x-8">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`py-3 border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${
-                      activeCategory === cat ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          )}
         </header>
 
         <div className="flex-grow overflow-y-auto">
